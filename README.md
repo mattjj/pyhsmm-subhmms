@@ -22,7 +22,7 @@ cd pyhsmm
 python setup.py build_ext --inplace
 ```
 
-Currently it's built with `-std=c++11`, which may cause some problems for older compilers (though we can remove that requirement).Using the OS X preinstalled `clang++` compiler, pass the `--with-old-clang` option to the build command. I recommend `g++` version 4.8 or later. You can specify the compiler using the `CC` environment variable, e.g. in bash or zsh:
+Currently it's built with `-std=c++11`, which may cause some problems for older compilers (though we can remove that requirement). Using the OS X preinstalled `clang++` compiler, pass the `--with-old-clang` option to the build command. I recommend `g++` version 4.8 or later. You can specify the compiler using the `CC` environment variable, e.g. in bash or zsh:
 
 ```bash
 CC=$(which g++) python setup.py build_ext --inplace
