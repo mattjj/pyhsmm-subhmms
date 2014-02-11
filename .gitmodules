@@ -1,0 +1,3 @@
+[submodule "pyhsmm"]
+	path = pyhsmm
+	url = git@github.com:mattjj/pyhsmm

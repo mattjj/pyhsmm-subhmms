@@ -1,4 +1,6 @@
 from __future__ import division
+import numpy as np
+from numpy import newaxis as na
 
 from pyhsmm.internals.states import HSMMStatesPython, HSMMStatesPossibleChangepoints
 
@@ -56,14 +58,14 @@ class HSMMSubHMMStates(HSMMStatesPython):
 
     def cumulative_likelihoods(self,start,stop):
         return np.hstack([self.cumulative_likelihood_state(start,stop,state)[:,na]
-            for state in range(self.state_dim)])
+            for state in range(self.num_states)])
 
     def likelihood_block_state(self,start,stop,state):
         return np.logaddexp.reduce(self.model.HMMs[state].messages_forwards(self.aBls[state][start:stop])[-1])
 
     def likelihood_block(self,start,stop):
         return np.array([self.likelihood_block_state(start,stop,state)
-            for state in range(self.state_dim)])
+            for state in range(self.num_states)])
 
     def _resample_substates(self):
         assert not hasattr(self,'substates_list') or len(self.substates_list) == 0
@@ -99,7 +101,7 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
     def block_cumulative_likelihoods(self,startblock,stopblock,possible_durations):
         # could recompute possible_durations given startblock, stopblock,
         # trunc/truncblock, and self.segmentlens, but why redo that effort?
-        return np.vstack([self.block_cumulative_likelihood_state(startblock,stopblock,state,possible_durations) for state in range(self.state_dim)]).T
+        return np.vstack([self.block_cumulative_likelihood_state(startblock,stopblock,state,possible_durations) for state in range(self.num_states)]).T
 
     def block_cumulative_likelihood_state(self,startblock,stopblock,state,possible_durations):
         start = self.segmentstarts[startblock]

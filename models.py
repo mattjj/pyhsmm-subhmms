@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+from matplotlib import cm
 
 from pyhsmm.models import HMM, HSMM, WeakLimitHDPHMM, WeakLimitHDPHSMM, \
         WeakLimitHDPHSMMPossibleChangepoints
@@ -11,7 +12,7 @@ import states
 
 class SubWeakLimitHDPHMM(WeakLimitHDPHMM):
     def messages_forwards(self,aBl):
-        return self._stats_class._messages_forwards_log(
+        return self._states_class._messages_forwards_log(
                 self.trans_distn.trans_matrix,
                 self.init_state_distn.pi_0,
                 aBl)
@@ -35,7 +36,7 @@ class WeakLimitHDPHSMMSubHMMs(WeakLimitHDPHSMM):
             sub_init_state_concentration=None,
             **kwargs):
         self.obs_distnss = obs_distnss
-        if subhmms is None:
+        if subHMMs is None:
             assert obs_distnss is not None
             self.HMMs = [
                     self._subhmm_class(
@@ -43,7 +44,7 @@ class WeakLimitHDPHSMMSubHMMs(WeakLimitHDPHSMM):
                         alpha=sub_alpha,gamma=sub_gamma,
                         alpha_a_0=sub_alpha_a_0,alpha_b_0=sub_alpha_b_0,
                         gamma_a_0=sub_gamma_a_0,gamma_b_0=sub_gamma_b_0,
-                        sub_init_state_concentration=sub_init_state_concentration,
+                        init_state_concentration=sub_init_state_concentration,
                         )
                     for obs_distns in obs_distnss]
         else:
@@ -76,6 +77,6 @@ class WeakLimitHDPHSMMSubHMMs(WeakLimitHDPHSMM):
                             for substate,offset in zip(substates,
                                 np.linspace(-0.5,0.5,num_substates,endpoint=True)/12.5)))
 
-class HSMMSubHMMsPossibleChangepoints(
+class WeakLimitHDPHSMMSubHMMsPossibleChangepoints(
         WeakLimitHDPHSMMSubHMMs, WeakLimitHDPHSMMPossibleChangepoints):
     _states_class = states.HSMMSubHMMStatesPossibleChangepoints
