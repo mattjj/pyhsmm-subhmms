@@ -28,14 +28,14 @@ obs_hypparams = dict(
 
 dur_hypparams = dict(
         r_discrete_distn=np.r_[0,0,0,0,0,1.,1.,1.],
-        alpha_0=20,
-        beta_0=2,
+        alpha_0=40,
+        beta_0=4,
         )
 
 true_obs_distnss = [[pyhsmm.distributions.Gaussian(**obs_hypparams) for substate in xrange(Nsub)]
         for superstate in xrange(Nsuper)]
 
-true_dur_distns = [pyhsmm.distributions.NegativeBinomialIntegerRVariantDuration(
+true_dur_distns = [pyhsmm.distributions.NegativeBinomialIntegerR2Duration(
     **dur_hypparams) for superstate in range(Nsuper)]
 
 truemodel = models.WeakLimitHDPHSMMSubHMMs(
@@ -64,7 +64,7 @@ obs_distnss = \
             for substate in range(Nmaxsub)] for superstate in range(Nmaxsuper)]
 
 dur_distns = \
-        [pyhsmm.distributions.NegativeBinomialIntegerRVariantDuration(
+        [pyhsmm.distributions.NegativeBinomialIntegerR2Duration(
             **dur_hypparams) for superstate in range(Nmaxsuper)]
 
 model = models.WeakLimitHDPHSMMSubHMMs(
@@ -75,17 +75,22 @@ model = models.WeakLimitHDPHSMMSubHMMs(
         obs_distnss=obs_distnss,
         dur_distns=dur_distns)
 
-model.add_data(data)
+model.add_data(data,stateseq=_)
+model.resample_parameters()
+model.resample_parameters()
+model.resample_parameters()
 
 ###############
 #  inference  #
 ###############
-for itr in progprint_xrange(25):
+for itr in progprint_xrange(5):
     model.resample_model()
 
 plt.figure()
 model.plot()
 plt.gcf().suptitle('fit')
+
+s = model.states_list[0]
 
 plt.show()
 
