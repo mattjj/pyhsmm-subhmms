@@ -131,7 +131,6 @@ for t, ((data,changepoints), rho_t) in progprint(
             changepoints=changepoints)
 
 # decode the last two just to take a look
-# UNTESTED
 for data, changepoints in zip(*[datas[-2:],changepointss[-2:]]):
     model.add_data(data,changepoints=changepoints)
     s = model.states_list[-1]
