@@ -108,11 +108,11 @@ class SubHMM(HMM):
 
     def meanfield_sgdstep_from_stats(self,stateslist,minibatchfrac,stepsize):
         mb_states_list = []
-        for mf_expected_states, mf_expected_transcounts, data in statslist:
+        for mf_expected_states, mf_expected_transcounts, data in stateslist:
             dummy = Dummy()
             dummy.mf_expected_states, dummy.mf_expected_transcounts, dummy.data = \
                     mf_expected_states, mf_expected_transcounts, data
-            mf_states_list.append(dummy)
+            mb_states_list.append(dummy)
 
         self.meanfield_sgdstep_parameters(mb_states_list,minibatchfrac,stepsize)
 
@@ -158,6 +158,12 @@ class HSMMSubHMMs(HSMM):
         for state, hmm in enumerate(self.HMMs):
             hmm.meanfield_update_from_stats(
                 [s.subhmm_stats[state] for s in self.states_list])
+
+    def meanfield_sgdstep_obs_distns(self,mb_states_list,minibatchfrac,stepsize):
+        for state, hmm in enumerate(self.HMMs):
+            hmm.meanfield_sgdstep_from_stats(
+                [s.subhmm_stats[state] for s in mb_states_list],
+                minibatchfrac,stepsize)
 
     def plot_observations(self,colors=None,states_objs=None):
         # NOTE: colors are superstate colors
