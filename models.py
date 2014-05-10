@@ -10,9 +10,6 @@ import states
 class Dummy(object):
     pass
 
-# TODO caching!
-# key could be t or tblock. let's do t
-
 class SubHMM(HMM):
     def __init__(self,*args,**kwargs):
         super(SubHMM,self).__init__(*args,**kwargs)
@@ -93,7 +90,7 @@ class SubHMM(HMM):
         vlb += sum(o.get_vlb() for o in self.obs_distns)
         return vlb
 
-    def meanfield_update_from_stats(self,statslist):
+    def _meanfield_update_from_stats(self,statslist):
         old_states = self.states_list
         self.states_list = []
         for mf_expected_states, mf_expected_transcounts, data in statslist:
@@ -106,7 +103,7 @@ class SubHMM(HMM):
 
         self.states_list = old_states
 
-    def meanfield_sgdstep_from_stats(self,stateslist,minibatchfrac,stepsize):
+    def _meanfield_sgdstep_from_stats(self,stateslist,minibatchfrac,stepsize):
         mb_states_list = []
         for mf_expected_states, mf_expected_transcounts, data in stateslist:
             dummy = Dummy()
@@ -114,7 +111,7 @@ class SubHMM(HMM):
                     mf_expected_states, mf_expected_transcounts, data
             mb_states_list.append(dummy)
 
-        self.meanfield_sgdstep_parameters(mb_states_list,minibatchfrac,stepsize)
+        self._meanfield_sgdstep_parameters(mb_states_list,minibatchfrac,stepsize)
 
 
 class SubWeakLimitHDPHMM(SubHMM,WeakLimitHDPHMM):
@@ -159,9 +156,9 @@ class HSMMSubHMMs(HSMM):
             hmm.meanfield_update_from_stats(
                 [s.subhmm_stats[state] for s in self.states_list])
 
-    def meanfield_sgdstep_obs_distns(self,mb_states_list,minibatchfrac,stepsize):
+    def _meanfield_sgdstep_obs_distns(self,mb_states_list,minibatchfrac,stepsize):
         for state, hmm in enumerate(self.HMMs):
-            hmm.meanfield_sgdstep_from_stats(
+            hmm._meanfield_sgdstep_from_stats(
                 [s.subhmm_stats[state] for s in mb_states_list],
                 minibatchfrac,stepsize)
 
