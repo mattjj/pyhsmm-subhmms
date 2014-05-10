@@ -47,7 +47,7 @@ truemodel = models.HSMMSubHMMs(
         obs_distnss=true_obs_distnss,
         dur_distns=true_dur_distns)
 
-datas, labelss = zip(*[truemodel.generate(T) for itr in xrange(10)])
+datas, labelss = zip(*[truemodel.generate(T) for itr in xrange(30)])
 training_size = minibatchsize(datas)
 
 # only keep the last example around for plotting
@@ -107,18 +107,19 @@ model = models.HSMMSubHMMsPossibleChangepoints(
 ###############
 
 
-# sampling for initialization
-for data, changepoints in zip(datas[-2:], changepointss[-2:]):
-    model.add_data(data,changepoints=changepoints)
+### sampling for initialization
 
-for itr in progprint_xrange(25):
-    model.resample_model()
+# for data, changepoints in zip(datas[-2:], changepointss[-2:]):
+#     model.add_data(data,changepoints=changepoints)
 
-plt.figure()
-model.plot()
-plt.gcf().suptitle('sampled')
+# for itr in progprint_xrange(25):
+#     model.resample_model()
 
-model.states_list = []
+# plt.figure()
+# model.plot()
+# plt.gcf().suptitle('sampled')
+
+# model.states_list = []
 
 # svi
 
