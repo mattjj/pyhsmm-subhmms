@@ -153,7 +153,7 @@ class HSMMSubHMMs(HSMM):
 
     def meanfield_update_obs_distns(self):
         for state, hmm in enumerate(self.HMMs):
-            hmm.meanfield_update_from_stats(
+            hmm._meanfield_update_from_stats(
                 [s.subhmm_stats[state] for s in self.states_list])
 
     def _meanfield_sgdstep_obs_distns(self,mb_states_list,minibatchfrac,stepsize):
