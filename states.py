@@ -172,32 +172,37 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
 
 
     ### lots of code copying here, unfortunately
-
     def E_step(self):
+        # NOTE: this method differs from parent because it passes in self.aBls
         self.clear_caches()
         self.expected_states, self.expected_transcounts, self.expected_durations, \
             self._loglike, self.subhmm_stats = self._expected_statistics(
                 self.trans_potentials, np.log(self.pi_0),
                 self.cumulative_obs_potentials, self.reverse_cumulative_obs_potentials,
                 self.dur_potentials, self.reverse_dur_potentials,
-                self.dur_survival_potentials, self.reverse_dur_survival_potentials,self.aBls)
+                self.dur_survival_potentials, self.reverse_dur_survival_potentials,
+                self.aBls) # here's the difference
         self.stateseq = self.expected_states.argmax(1) # for plotting
 
     def meanfieldupdate(self):
+        # NOTE: this method differs from parent because it passes in self.aBls
         self.clear_caches()
         self.mf_expected_states, self.mf_expected_transcounts, self.mf_expected_durations, \
             self._vlb, self.subhmm_stats = self._expected_statistics(
                 self.mf_trans_potentials, np.log(self.mf_pi_0),
                 self.mf_cumulative_obs_potentials, self.mf_reverse_cumulative_obs_potentials,
                 self.mf_dur_potentials, self.mf_reverse_dur_potentials,
-                self.mf_dur_survival_potentials, self.mf_reverse_dur_survival_potentials,self.mf_aBls)
+                self.mf_dur_survival_potentials, self.mf_reverse_dur_survival_potentials,
+                self.mf_aBls)
         self.stateseq = self.mf_expected_states.argmax(1) # for plotting
 
     def _expected_statistics(self,
             trans_potentials, initial_state_potential,
             cumulative_obs_potentials, reverse_cumulative_obs_potentials,
             dur_potentials, reverse_dur_potentials,
-            dur_survival_potentials, reverse_dur_survival_potentials,aBls):
+            dur_survival_potentials, reverse_dur_survival_potentials,
+            aBls):
+        # NOTE: this method differs from parent because it gets self.aBls
         alphal, alphastarl, _ = hsmm_messages_forwards_log(
                 trans_potentials,
                 initial_state_potential,
@@ -225,7 +230,7 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
                 alphastarl, betal, normalizer)
 
         ### here's the different bit!
-        # also compute subhmm expected stats
+        # also compute subhmm expected stats, using aBls
 
         subhmm_expected_states = [np.zeros((self.Tfull,hmm.num_states)) for hmm in self.model.HMMs]
         subhmm_expected_trans = [np.zeros((hmm.num_states,hmm.num_states)) for hmm in self.model.HMMs]
@@ -246,7 +251,7 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
 
                 for state, (hmm, weight) in enumerate(zip(self.model.HMMs,weights)):
                     states, trans, _ = hmm.mf_expected_statistics(
-                            aBls[state][tstart:tend],tstart,tend)
+                            aBls[state][tstart:tend],tstart,tend) # here's where aBls are used
                     subhmm_expected_states[state][tstart:tend] += weight*states
                     subhmm_expected_trans[state] += weight*trans
 
