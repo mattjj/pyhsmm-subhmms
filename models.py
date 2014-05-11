@@ -10,6 +10,15 @@ import states
 class Dummy(object):
     pass
 
+# TODO caching model needs to account for the possibility of multiple hsmm state
+# sequences sharing the same set of subhmms
+# solution space:
+# - cache in the hsmm states instead
+# - paass in the hsmm states object as part of the key
+# i like the former. that means moving the cache logic there, not calling the
+# hmm directly so the potentials functions should get split into two pieces.
+# would be a lot less changing just to key the hash here.
+
 class SubHMM(HMM):
     def __init__(self,*args,**kwargs):
         super(SubHMM,self).__init__(*args,**kwargs)
@@ -18,7 +27,6 @@ class SubHMM(HMM):
     def _clear_message_caches(self):
         self._cache = {}
         self._reverse_cache = {}
-
 
     def get_aBl(self,data):
         self.add_data(data=data,stateseq=np.zeros(data.shape[0]))
@@ -29,50 +37,50 @@ class SubHMM(HMM):
         return self.states_list.pop().mf_aBl
 
 
-    def cumulative_obs_potentials(self,aBl,t=None):
-        if t not in self._cache or t is None:
-            self._cache[t] = self._states_class._messages_forwards_log(
+    def cumulative_obs_potentials(self,aBl,obj=None,t=None):
+        if (obj,t) not in self._cache or t is None or obj is None:
+            self._cache[(obj,t)] = self._states_class._messages_forwards_log(
                     self.trans_distn.trans_matrix,self.init_state_distn.pi_0,aBl)
-        alphal = self._cache[t]
+        alphal = self._cache[(obj,t)]
         return np.logaddexp.reduce(alphal,axis=1)
 
-    def reverse_cumulative_obs_potentials(self,aBl,t=None):
-        if t not in self._reverse_cache or t is None:
-            self._reverse_cache[t] = self._states_class._messages_backwards_log(
+    def reverse_cumulative_obs_potentials(self,aBl,obj=None,t=None):
+        if (obj,t) not in self._reverse_cache or t is None or obj is None:
+            self._reverse_cache[(obj,t)] = self._states_class._messages_backwards_log(
                     self.trans_distn.trans_matrix,aBl)
-        betal = self._reverse_cache[t]
+        betal = self._reverse_cache[(obj,t)]
         return np.logaddexp.reduce(betal + np.log(self.init_state_distn.pi_0) + aBl,axis=1)
 
-    def mf_cumulative_obs_potentials(self,mf_aBl,t=None):
-        if t not in self._cache or t is None:
-            self._cache[t] = self._states_class._messages_forwards_log(
+    def mf_cumulative_obs_potentials(self,mf_aBl,obj=None,t=None):
+        if (obj,t) not in self._cache or t is None or obj is None:
+            self._cache[(obj,t)] = self._states_class._messages_forwards_log(
                     self.trans_distn.exp_expected_log_trans_matrix,
                     self.init_state_distn.exp_expected_log_init_state_distn,
                     mf_aBl)
-        mf_alphal = self._cache[t]
+        mf_alphal = self._cache[(obj,t)]
         return np.logaddexp.reduce(mf_alphal,axis=1)
 
-    def mf_reverse_cumulative_obs_potentials(self,mf_aBl,t=None):
-        if t not in self._reverse_cache or t is None:
-            self._reverse_cache[t] = self._states_class._messages_backwards_log(
+    def mf_reverse_cumulative_obs_potentials(self,mf_aBl,obj=None,t=None):
+        if (obj,t) not in self._reverse_cache or t is None or obj is None:
+            self._reverse_cache[(obj,t)] = self._states_class._messages_backwards_log(
                     self.trans_distn.exp_expected_log_trans_matrix,mf_aBl)
-        mf_betal = self._reverse_cache[t]
+        mf_betal = self._reverse_cache[(obj,t)]
         return np.logaddexp.reduce(
                 mf_betal +
                 np.log(self.init_state_distn.exp_expected_log_init_state_distn) +
                 mf_aBl,axis=1)
 
-    def mf_expected_statistics(self,mf_aBl,tstart=None,tend=None):
-        if tstart is not None and tstart in self._cache:
-            mf_alphal = self._cache[tstart][:tend-tstart]
+    def mf_expected_statistics(self,mf_aBl,obj=None,tstart=None,tend=None):
+        if tstart is not None and obj is not None and (obj,tstart) in self._cache:
+            mf_alphal = self._cache[(obj,tstart)][:tend-tstart]
         else:
             mf_alphal = self._states_class._messages_forwards_log(
                     self.trans_distn.exp_expected_log_trans_matrix,
                     self.init_state_distn.exp_expected_log_init_state_distn,
                     mf_aBl)
 
-        if tend is not None and tend in self._reverse_cache:
-            mf_betal = self._reverse_cache[tend][-(tend-tstart):]
+        if tend is not None and obj is not None and (obj,tend) in self._reverse_cache:
+            mf_betal = self._reverse_cache[(obj,tend)][-(tend-tstart):]
         else:
             mf_betal = self._states_class._messages_backwards_log(
                     self.trans_distn.exp_expected_log_trans_matrix,mf_aBl)

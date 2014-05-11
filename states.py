@@ -52,7 +52,7 @@ class HSMMSubHMMStates(HSMMStatesPython):
 
     def clear_caches(self):
         for hmm in self.model.HMMs:
-            hmm._clear_message_caches()
+            hmm._clear_message_caches() # NOTE: this is REALLY important!
         self._aBls = self._mf_aBls = None
         super(HSMMSubHMMStates,self).clear_caches()
 
@@ -134,6 +134,11 @@ class HSMMSubHMMStates(HSMMStatesPython):
 class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleChangepoints):
     # need this method as long as we don't have a general sample forwards (which
     # we probably don't want until we get the backwards normalization right...)
+    def clear_caches(self):
+        super(HSMMSubHMMStatesPossibleChangepoints,self).clear_caches()
+        for hmm in self.model.HMMs:
+            hmm._clear_message_caches()
+
     def sample_forwards(self,betal,betastarl):
         return HSMMStatesPossibleChangepoints.sample_forwards(self,betal,betastarl)
 
@@ -144,14 +149,14 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
     def cumulative_obs_potentials(self,tblock):
         t = self.segmentstarts[tblock]
         possible_durations = self.segmentlens[tblock:].cumsum()
-        return np.hstack([hmm.cumulative_obs_potentials(self.aBls[state][t:],t)\
+        return np.hstack([hmm.cumulative_obs_potentials(self.aBls[state][t:],self,t)\
                 [possible_durations -1][:,na]
                 for state, hmm in enumerate(self.model.HMMs)])
 
     def reverse_cumulative_obs_potentials(self,tblock):
         t = self.segmentstarts[tblock] + self.segmentlens[tblock]
         possible_durations = rcumsum(self.segmentlens[:tblock+1])
-        return np.hstack([hmm.reverse_cumulative_obs_potentials(self.aBls[state][:t],t)\
+        return np.hstack([hmm.reverse_cumulative_obs_potentials(self.aBls[state][:t],self,t)\
                 [-possible_durations][:,na]
                 # [possible_durations -1][:,na]
                 for state, hmm in enumerate(self.model.HMMs)])
@@ -159,14 +164,14 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
     def mf_cumulative_obs_potentials(self,tblock):
         t = self.segmentstarts[tblock]
         possible_durations = self.segmentlens[tblock:].cumsum()
-        return np.hstack([hmm.mf_cumulative_obs_potentials(self.mf_aBls[state][t:],t)\
+        return np.hstack([hmm.mf_cumulative_obs_potentials(self.mf_aBls[state][t:],self,t)\
                 [possible_durations -1][:,na]
                 for state, hmm in enumerate(self.model.HMMs)])
 
     def mf_reverse_cumulative_obs_potentials(self,tblock):
         t = self.segmentstarts[tblock] + self.segmentlens[tblock]
         possible_durations = rcumsum(self.segmentlens[:tblock+1])
-        return np.hstack([hmm.mf_reverse_cumulative_obs_potentials(self.mf_aBls[state][:t],t)\
+        return np.hstack([hmm.mf_reverse_cumulative_obs_potentials(self.mf_aBls[state][:t],self,t)\
                 [-possible_durations][:,na]
                 for state, hmm in enumerate(self.model.HMMs)])
 
@@ -186,6 +191,8 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
     def E_step(self):
         # NOTE: this method differs from parent because it passes in self.aBls
         self.clear_caches()
+        for hmm in self.model.HMMs:
+            assert len(hmm._cache) == 0 and len(hmm._reverse_cache) == 0
         self.all_expected_stats = self._expected_statistics(
                 self.trans_potentials, np.log(self.pi_0),
                 self.cumulative_obs_potentials, self.reverse_cumulative_obs_potentials,
@@ -197,6 +204,8 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
     def meanfieldupdate(self):
         # NOTE: this method differs from parent because it passes in self.aBls
         self.clear_caches()
+        for hmm in self.model.HMMs:
+            assert len(hmm._cache) == 0 and len(hmm._reverse_cache) == 0
         self.all_expected_stats = self._expected_statistics(
                 self.mf_trans_potentials, np.log(self.mf_pi_0),
                 self.mf_cumulative_obs_potentials, self.mf_reverse_cumulative_obs_potentials,
@@ -260,7 +269,7 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
 
                 for state, (hmm, weight) in enumerate(zip(self.model.HMMs,weights)):
                     states, trans, _ = hmm.mf_expected_statistics( # NOTE: calls mf version!
-                            aBls[state][tstart:tend],tstart,tend) # here's where aBls are used
+                            aBls[state][tstart:tend],self,tstart,tend) # here's where aBls are used
                     subhmm_expected_states[state][tstart:tend] += weight*states
                     subhmm_expected_trans[state] += weight*trans
 
