@@ -93,10 +93,10 @@ class SubHMM(HMM):
     def _meanfield_update_from_stats(self,statslist):
         old_states = self.states_list
         self.states_list = []
-        for mf_expected_states, mf_expected_transcounts, data in statslist:
+        for expected_states, expected_transcounts, data in statslist:
             dummy = Dummy()
-            dummy.mf_expected_states, dummy.mf_expected_transcounts, dummy.data = \
-                    mf_expected_states, mf_expected_transcounts, data
+            dummy.expected_states, dummy.expected_transcounts, dummy.data = \
+                    expected_states, expected_transcounts, data
             self.states_list.append(dummy)
 
         self.meanfield_update_parameters()
@@ -105,10 +105,10 @@ class SubHMM(HMM):
 
     def _meanfield_sgdstep_from_stats(self,stateslist,minibatchfrac,stepsize):
         mb_states_list = []
-        for mf_expected_states, mf_expected_transcounts, data in stateslist:
+        for expected_states, expected_transcounts, data in stateslist:
             dummy = Dummy()
-            dummy.mf_expected_states, dummy.mf_expected_transcounts, dummy.data = \
-                    mf_expected_states, mf_expected_transcounts, data
+            dummy.expected_states, dummy.expected_transcounts, dummy.data = \
+                    expected_states, expected_transcounts, data
             mb_states_list.append(dummy)
 
         self._meanfield_sgdstep_parameters(mb_states_list,minibatchfrac,stepsize)

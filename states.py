@@ -171,12 +171,22 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
                 for state, hmm in enumerate(self.model.HMMs)])
 
 
-    ### lots of code copying here, unfortunately
+    ### lots of code copying here, unfortunately TODO
+
+    @property
+    def all_expected_stats(self):
+        return self.expected_states, self.expected_transcounts, self.expected_durations, \
+                self._normalizer, self.subhmm_stats
+
+    @all_expected_stats.setter
+    def all_expected_stats(self,vals):
+        self.expected_states, self.expected_transcounts, self.expected_durations, \
+                self._normalizer, self.subhmm_stats = vals
+
     def E_step(self):
         # NOTE: this method differs from parent because it passes in self.aBls
         self.clear_caches()
-        self.expected_states, self.expected_transcounts, self.expected_durations, \
-            self._loglike, self.subhmm_stats = self._expected_statistics(
+        self.all_expected_stats = self._expected_statistics(
                 self.trans_potentials, np.log(self.pi_0),
                 self.cumulative_obs_potentials, self.reverse_cumulative_obs_potentials,
                 self.dur_potentials, self.reverse_dur_potentials,
@@ -187,14 +197,13 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
     def meanfieldupdate(self):
         # NOTE: this method differs from parent because it passes in self.aBls
         self.clear_caches()
-        self.mf_expected_states, self.mf_expected_transcounts, self.mf_expected_durations, \
-            self._vlb, self.subhmm_stats = self._expected_statistics(
+        self.all_expected_stats = self._expected_statistics(
                 self.mf_trans_potentials, np.log(self.mf_pi_0),
                 self.mf_cumulative_obs_potentials, self.mf_reverse_cumulative_obs_potentials,
                 self.mf_dur_potentials, self.mf_reverse_dur_potentials,
                 self.mf_dur_survival_potentials, self.mf_reverse_dur_survival_potentials,
                 self.mf_aBls)
-        self.stateseq = self.mf_expected_states.argmax(1) # for plotting
+        self.stateseq = self.expected_states.argmax(1) # for plotting
 
     def _expected_statistics(self,
             trans_potentials, initial_state_potential,
@@ -250,7 +259,7 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
                             dur_survival_potentials(tblockend) - normalizer)
 
                 for state, (hmm, weight) in enumerate(zip(self.model.HMMs,weights)):
-                    states, trans, _ = hmm.mf_expected_statistics(
+                    states, trans, _ = hmm.mf_expected_statistics( # NOTE: calls mf version!
                             aBls[state][tstart:tend],tstart,tend) # here's where aBls are used
                     subhmm_expected_states[state][tstart:tend] += weight*states
                     subhmm_expected_trans[state] += weight*trans
