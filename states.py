@@ -8,7 +8,9 @@ from pyhsmm.util.profiling import line_profiled
 from pyhsmm.internals.hsmm_states import HSMMStatesPython, HSMMStatesPossibleChangepoints, \
         hsmm_messages_forwards_log, hsmm_messages_backwards_log
 
-PROFILING=True
+PROFILING=False
+
+TRUNC = 5
 
 class HSMMSubHMMStates(HSMMStatesPython):
     # NOTE: can't extend the eigen version because its sample_forwards depends
@@ -148,14 +150,14 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
 
     def cumulative_obs_potentials(self,tblock):
         t = self.segmentstarts[tblock]
-        possible_durations = self.segmentlens[tblock:].cumsum()
+        possible_durations = self.segmentlens[tblock:].cumsum()[:TRUNC]
         return np.hstack([hmm.cumulative_obs_potentials(self.aBls[state][t:],self,t)\
                 [possible_durations -1][:,na]
                 for state, hmm in enumerate(self.model.HMMs)])
 
     def reverse_cumulative_obs_potentials(self,tblock):
         t = self.segmentstarts[tblock] + self.segmentlens[tblock]
-        possible_durations = rcumsum(self.segmentlens[:tblock+1])
+        possible_durations = rcumsum(self.segmentlens[:tblock+1])[-TRUNC if TRUNC is not None else None:]
         return np.hstack([hmm.reverse_cumulative_obs_potentials(self.aBls[state][:t],self,t)\
                 [-possible_durations][:,na]
                 # [possible_durations -1][:,na]
@@ -163,18 +165,53 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
 
     def mf_cumulative_obs_potentials(self,tblock):
         t = self.segmentstarts[tblock]
-        possible_durations = self.segmentlens[tblock:].cumsum()
+        possible_durations = self.segmentlens[tblock:].cumsum()[:TRUNC]
         return np.hstack([hmm.mf_cumulative_obs_potentials(self.mf_aBls[state][t:],self,t)\
                 [possible_durations -1][:,na]
                 for state, hmm in enumerate(self.model.HMMs)])
 
     def mf_reverse_cumulative_obs_potentials(self,tblock):
         t = self.segmentstarts[tblock] + self.segmentlens[tblock]
-        possible_durations = rcumsum(self.segmentlens[:tblock+1])
+        possible_durations = rcumsum(self.segmentlens[:tblock+1])[-TRUNC if TRUNC is not None else None:]
         return np.hstack([hmm.mf_reverse_cumulative_obs_potentials(self.mf_aBls[state][:t],self,t)\
                 [-possible_durations][:,na]
                 for state, hmm in enumerate(self.model.HMMs)])
 
+    # TODO TODO the following are only in here for the hard-coded truncation
+
+
+    def dur_potentials(self,tblock):
+        possible_durations = self.segmentlens[tblock:].cumsum()[:TRUNC]
+        return self.aDl[possible_durations -1]
+
+    def reverse_dur_potentials(self,tblock):
+        possible_durations = rcumsum(self.segmentlens[:tblock+1])[-TRUNC if TRUNC is not None else None:]
+        return self.aDl[possible_durations -1]
+
+    def dur_survival_potentials(self,tblock):
+        max_dur = self.segmentlens[tblock:].cumsum()[:TRUNC][-1]
+        return self.aDsl[max_dur -1]
+
+    def reverse_dur_survival_potentials(self,tblock):
+        max_dur = rcumsum(self.segmentlens[:tblock+1])[-TRUNC if TRUNC is not None else None:][0]
+        return self.aDsl[max_dur -1]
+
+
+    def mf_dur_potentials(self,tblock):
+        possible_durations = self.segmentlens[tblock:].cumsum()[:TRUNC]
+        return self.mf_aDl[possible_durations -1]
+
+    def mf_reverse_dur_potentials(self,tblock):
+        possible_durations = rcumsum(self.segmentlens[:tblock+1])[-TRUNC if TRUNC is not None else None:]
+        return self.mf_aDl[possible_durations -1]
+
+    def mf_dur_survival_potentials(self,tblock):
+        max_dur = self.segmentlens[tblock:].cumsum()[:TRUNC][-1]
+        return self.mf_aDsl[max_dur -1]
+
+    def mf_reverse_dur_survival_potentials(self,tblock):
+        max_dur = rcumsum(self.segmentlens[:tblock+1])[-TRUNC if TRUNC is not None else None:][0]
+        return self.mf_aDsl[max_dur -1]
 
     ### lots of code copying here, unfortunately TODO
 
@@ -237,7 +274,8 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
                 cumulative_obs_potentials,
                 dur_potentials,
                 dur_survival_potentials,
-                np.empty((self.T,self.num_states)),np.empty((self.T,self.num_states)))
+                np.empty((self.T,self.num_states)),np.empty((self.T,self.num_states)),
+                right_censoring=False)
 
         expected_states = self._expected_states(
                 alphal, betal, alphastarl, betastarl, normalizer)
@@ -257,7 +295,7 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
 
         for tblock in xrange(self.Tblock):
             for tblockend, obs, dur in zip(
-                    xrange(tblock,self.Tblock),
+                    xrange(tblock,min(self.Tblock,tblock+TRUNC)),
                     cumulative_obs_potentials(tblock),dur_potentials(tblock)):
 
                 tstart = self.segmentstarts[tblock]
@@ -270,15 +308,33 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
                             dur_survival_potentials(tblockend) - normalizer)
 
                 for state, (hmm, weight) in enumerate(zip(self.model.HMMs,weights)):
-                    states, trans, _ = hmm.mf_expected_statistics( # NOTE: calls mf version!
-                            aBls[state][tstart:tend],self,tstart,tend) # here's where aBls are used
-                    subhmm_expected_states[state][tstart:tend] += weight*states
-                    subhmm_expected_trans[state] += weight*trans
+                    if weight > 0:
+                        states, trans, _ = hmm.mf_expected_statistics( # NOTE: calls mf version!
+                                aBls[state][tstart:tend],self,tstart,tend) # here's where aBls are used
+                        subhmm_expected_states[state][tstart:tend] += weight*states
+                        subhmm_expected_trans[state] += weight*trans
 
         subhmm_stats = [[states, trans, self.data]
                 for states, trans in zip(subhmm_expected_states,subhmm_expected_trans)]
 
         return expected_states, expected_transitions, expected_durations, normalizer, subhmm_stats
+
+
+    def _expected_durations(self,
+            dur_potentials,cumulative_obs_potentials,
+            alphastarl,betal,normalizer):
+        logpmfs = -np.inf*np.ones((self.Tfull,alphastarl.shape[1]))
+        errs = np.seterr(invalid='ignore') # logaddexp(-inf,-inf)
+        # TODO censoring not handled correctly here
+        for tblock in xrange(self.Tblock):
+            possible_durations = self.segmentlens[tblock:].cumsum()[:TRUNC]
+            logpmfs[possible_durations -1] = np.logaddexp(
+                    dur_potentials(tblock) + alphastarl[tblock]
+                    + betal[tblock:tblock+TRUNC if TRUNC is not None else None]
+                    + cumulative_obs_potentials(tblock) - normalizer,
+                    logpmfs[possible_durations -1])
+        np.seterr(**errs)
+        return np.exp(logpmfs.T)
 
 
     ### OLD

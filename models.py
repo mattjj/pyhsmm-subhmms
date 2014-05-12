@@ -8,7 +8,7 @@ from pyhsmm.util.profiling import line_profiled
 
 import states
 
-PROFILING=True
+PROFILING=False
 
 class Dummy(object):
     pass
