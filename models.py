@@ -4,8 +4,11 @@ from matplotlib import cm
 
 from pyhsmm.models import HMM, HSMM, WeakLimitHDPHMM, WeakLimitHDPHSMM, \
         WeakLimitHDPHSMMPossibleChangepoints, HSMMPossibleChangepoints
+from pyhsmm.util.profiling import line_profiled
 
 import states
+
+PROFILING=True
 
 class Dummy(object):
     pass
@@ -27,6 +30,7 @@ class SubHMM(HMM):
     def _clear_message_caches(self):
         self._cache = {}
         self._reverse_cache = {}
+        self._mf_trans_matrix = None
 
     def get_aBl(self,data):
         self.add_data(data=data,stateseq=np.zeros(data.shape[0]))
@@ -70,6 +74,7 @@ class SubHMM(HMM):
                 np.log(self.init_state_distn.exp_expected_log_init_state_distn) +
                 mf_aBl,axis=1)
 
+    @line_profiled
     def mf_expected_statistics(self,mf_aBl,obj=None,tstart=None,tend=None):
         if tstart is not None and obj is not None and (obj,tstart) in self._cache:
             mf_alphal = self._cache[(obj,tstart)][:tend-tstart]
@@ -86,8 +91,14 @@ class SubHMM(HMM):
                     self.trans_distn.exp_expected_log_trans_matrix,mf_aBl)
 
         return self._states_class._expected_statistics_from_messages(
-                self.trans_distn.exp_expected_log_trans_matrix,
+                self.mf_trans_matrix,
                 mf_aBl,mf_alphal,mf_betal)
+
+    @property
+    def mf_trans_matrix(self):
+        if self._mf_trans_matrix is None:
+            self._mf_trans_matrix = self.trans_distn.exp_expected_log_trans_matrix
+        return self._mf_trans_matrix
 
 
     def get_vlb(self):

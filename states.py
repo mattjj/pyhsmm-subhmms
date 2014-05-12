@@ -3,9 +3,12 @@ import numpy as np
 from numpy import newaxis as na
 
 from pyhsmm.util.general import rcumsum
+from pyhsmm.util.profiling import line_profiled
 
 from pyhsmm.internals.hsmm_states import HSMMStatesPython, HSMMStatesPossibleChangepoints, \
         hsmm_messages_forwards_log, hsmm_messages_backwards_log
+
+PROFILING=True
 
 class HSMMSubHMMStates(HSMMStatesPython):
     # NOTE: can't extend the eigen version because its sample_forwards depends
@@ -86,9 +89,6 @@ class HSMMSubHMMStates(HSMMStatesPython):
             self.substates_list.append(self.model.HMMs[state].states_list[-1])
 
     ### NEW
-
-    # TODO once the HSMM fitting is working, cache these messages for re-use
-    # (make the subhmms lazy)
 
     def cumulative_obs_potentials(self,t):
         return np.hstack([hmm.cumulative_obs_potentials(self.aBls[state][t:])[:,na]
@@ -201,6 +201,7 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
                 self.aBls) # here's the difference
         self.stateseq = self.expected_states.argmax(1) # for plotting
 
+    @line_profiled
     def meanfieldupdate(self):
         # NOTE: this method differs from parent because it passes in self.aBls
         self.clear_caches()
@@ -214,6 +215,7 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
                 self.mf_aBls)
         self.stateseq = self.expected_states.argmax(1) # for plotting
 
+    @line_profiled
     def _expected_statistics(self,
             trans_potentials, initial_state_potential,
             cumulative_obs_potentials, reverse_cumulative_obs_potentials,
@@ -272,7 +274,6 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
                             aBls[state][tstart:tend],self,tstart,tend) # here's where aBls are used
                     subhmm_expected_states[state][tstart:tend] += weight*states
                     subhmm_expected_trans[state] += weight*trans
-
 
         subhmm_stats = [[states, trans, self.data]
                 for states, trans in zip(subhmm_expected_states,subhmm_expected_trans)]
