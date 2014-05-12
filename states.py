@@ -10,7 +10,7 @@ from pyhsmm.internals.hsmm_states import HSMMStatesPython, HSMMStatesPossibleCha
 
 PROFILING=False
 
-TRUNC = 5
+TRUNC = 3
 
 class HSMMSubHMMStates(HSMMStatesPython):
     # NOTE: can't extend the eigen version because its sample_forwards depends
