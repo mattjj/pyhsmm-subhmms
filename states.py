@@ -94,14 +94,14 @@ class HSMMSubHMMStates(HSMMStatesPython):
 
     def cumulative_obs_potentials(self,t):
         return np.hstack([hmm.cumulative_obs_potentials(self.aBls[state][t:])[:,na]
-            for state, hmm in enumerate(self.model.HMMs)])
+            for state, hmm in enumerate(self.model.HMMs)]), np.zeros(self.num_states)
         # return np.hstack([np.logaddexp.reduce(
         #     hmm.messages_forwards(self.aBls[state][t:]),axis=1)[:,na]
         #     for state, hmm in enumerate(self.model.HMMs)])
 
     def reverse_cumulative_obs_potentials(self,t):
         return np.hstack([hmm.reverse_cumulative_obs_potentials(self.aBls[state][:t+1])[:,na]
-            for state, hmm in enumerate(self.model.HMMs)])
+            for state, hmm in enumerate(self.model.HMMs)]), np.zeros(self.num_states)
         # return np.hstack([np.logaddexp.reduce(
         #     np.log(hmm.init_state_distn.pi_0) + # could cache this
         #     hmm.messages_backwards(self.aBls[state][:t+1]),axis=1)[:,na]

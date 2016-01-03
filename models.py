@@ -181,24 +181,9 @@ class HSMMSubHMMs(HSMM):
                 [s.subhmm_stats[state] for s in mb_states_list],
                 minibatchfrac,stepsize)
 
-    def plot_observations(self,colors=None,states_objs=None):
-        # NOTE: colors are superstate colors
-        if colors is None:
-            colors = self._get_colors()
-        if states_objs is None:
-            states_objs = self.states_list
-
-        cmap = cm.get_cmap()
-        used_superstates = self._get_used_states(states_objs)
-        for superstate,hmm in enumerate(self.HMMs):
-            if superstate in used_superstates:
-                substates = hmm._get_used_states()
-                num_substates = len(substates)
-                hmm.plot_observations(
-                        colors=dict(
-                            (substate,colors[superstate]+offset)
-                            for substate,offset in zip(substates,
-                                np.linspace(-0.5,0.5,num_substates,endpoint=True)/12.5)))
+    # def plot_observations(self,colors=None,states_objs=None):
+    def plot_observations(self, ax=None, color=None, plot_slice=slice(None), update=False):
+        return []  # no plotting here anymore!
 
     def _reregister_state_sequences(self):
         for hmm in self.HMMs:

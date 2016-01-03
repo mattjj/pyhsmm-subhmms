@@ -39,7 +39,7 @@ true_dur_distns = [pyhsmm.distributions.NegativeBinomialIntegerR2Duration(
     **dur_hypparams) for superstate in range(Nsuper)]
 
 truemodel = models.WeakLimitHDPHSMMSubHMMs(
-        init_state_concentration=6,
+        init_state_concentration=6.,
         sub_init_state_concentration=6.,
         alpha=10.,gamma=10.,
         sub_alpha=10.,sub_gamma=10.,
@@ -68,10 +68,10 @@ dur_distns = \
             **dur_hypparams) for superstate in range(Nmaxsuper)]
 
 model = models.WeakLimitHDPHSMMSubHMMs(
-        init_state_concentration=6,
+        init_state_concentration=6.,
         sub_init_state_concentration=6.,
         alpha=6.,gamma=6.,
-        sub_alpha=6,sub_gamma=6,
+        sub_alpha=6.,sub_gamma=6.,
         obs_distnss=obs_distnss,
         dur_distns=dur_distns)
 
