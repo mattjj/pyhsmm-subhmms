@@ -11,7 +11,8 @@ import states
 PROFILING=False
 
 class Dummy(object):
-    pass
+    def clear_caches(self):
+        pass
 
 # TODO caching model needs to account for the possibility of multiple hsmm state
 # sequences sharing the same set of subhmms

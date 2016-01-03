@@ -153,7 +153,7 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
         possible_durations = self.segmentlens[tblock:].cumsum()[:TRUNC]
         return np.hstack([hmm.cumulative_obs_potentials(self.aBls[state][t:],self,t)\
                 [possible_durations -1][:,na]
-                for state, hmm in enumerate(self.model.HMMs)])
+                for state, hmm in enumerate(self.model.HMMs)]), np.zeros(self.num_states)
 
     def reverse_cumulative_obs_potentials(self,tblock):
         t = self.segmentstarts[tblock] + self.segmentlens[tblock]
@@ -168,7 +168,7 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
         possible_durations = self.segmentlens[tblock:].cumsum()[:TRUNC]
         return np.hstack([hmm.mf_cumulative_obs_potentials(self.mf_aBls[state][t:],self,t)\
                 [possible_durations -1][:,na]
-                for state, hmm in enumerate(self.model.HMMs)])
+                for state, hmm in enumerate(self.model.HMMs)]), np.zeros(self.num_states)
 
     def mf_reverse_cumulative_obs_potentials(self,tblock):
         t = self.segmentstarts[tblock] + self.segmentlens[tblock]
@@ -296,7 +296,7 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
         for tblock in xrange(self.Tblock):
             for tblockend, obs, dur in zip(
                     xrange(tblock,min(self.Tblock,tblock+TRUNC)),
-                    cumulative_obs_potentials(tblock),dur_potentials(tblock)):
+                    cumulative_obs_potentials(tblock)[0],dur_potentials(tblock)):
 
                 tstart = self.segmentstarts[tblock]
                 tend = self.segmentstarts[tblockend] + self.segmentlens[tblockend]
@@ -328,10 +328,11 @@ class HSMMSubHMMStatesPossibleChangepoints(HSMMSubHMMStates,HSMMStatesPossibleCh
         # TODO censoring not handled correctly here
         for tblock in xrange(self.Tblock):
             possible_durations = self.segmentlens[tblock:].cumsum()[:TRUNC]
+            obs_potentials, _ = cumulative_obs_potentials(tblock)
             logpmfs[possible_durations -1] = np.logaddexp(
                     dur_potentials(tblock) + alphastarl[tblock]
                     + betal[tblock:tblock+TRUNC if TRUNC is not None else None]
-                    + cumulative_obs_potentials(tblock) - normalizer,
+                    + obs_potentials - normalizer,
                     logpmfs[possible_durations -1])
         np.seterr(**errs)
         return np.exp(logpmfs.T)
